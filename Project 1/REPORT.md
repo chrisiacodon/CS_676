@@ -113,7 +113,13 @@ For example, rather than returning only a sequence of observations about a `.inf
 
 This modification did not change MAE or band accuracy because it changed presentation rather than the scoring calculation. However, it made the output more interpretable in the integrated Streamlit application and made it easier for a user to understand why the algorithm produced a particular result.
 
-## 4. Experimental Evaluation and Results
+### 3.7 Environment Configuration for the LLM Layer
+
+The starter project expected an `ANTHROPIC_API_KEY` environment variable for the optional Claude layer and provided an `.env.example` file. However, the credibility module did not explicitly load the local `.env` file. As a result, running `evaluate.py --llm` could report that the LLM layer was enabled while silently falling back to rules-only scoring because the API key was unavailable to the process.
+
+I added `python-dotenv` loading when the credibility module is initialized. This allows the application and evaluation script to obtain the API key from the local `.env` file while keeping the key out of the source code and version control. The existing graceful fallback behavior remains intact if no key is available or an API call fails.
+
+# 4. Experimental Evaluation and Results
 
 I evaluated each major modification using the same 24 labeled URLs in `evaluate.py`. I also reran the automated contract tests after each change to ensure that improvements in evaluation performance did not break the required `score_url()` interface or malformed-input handling.
 
@@ -129,8 +135,11 @@ The experiments were performed incrementally rather than evaluating only the fin
 | + Sensational-path signal | **0.094** | **83.3%** | **0.230** |
 | + Crossref retry handling | **0.094** | **83.3%** | **0.230** |
 | + Improved explanation | **0.094** | **83.3%** | **0.230** |
+| + Claude LLM layer | **0.058** | **91.7%** | **0.140** |
 
 The final rule-based implementation reduced MAE from 0.142 to 0.094, a reduction of approximately 33.8%. Band accuracy increased from 66.7% to 83.3%, corresponding to an increase from 16 of 24 URLs assigned to the correct credibility band to 20 of 24. The largest individual error decreased from 0.410 to 0.230.
+
+When the Claude LLM layer was enabled, performance improved further. The combined rule-based and LLM system achieved an MAE of 0.058, band accuracy of 91.7% (22 of 24 URLs), and a worst single error of 0.140. Compared with the original rules-only baseline, this represents an approximately 59.2% reduction in MAE, a 25.0 percentage-point increase in band accuracy, and a reduction in the worst single error from 0.410 to 0.140. These results suggest that the deterministic rules and the LLM provide complementary information: the rules supply transparent, reproducible signals, while the LLM can incorporate broader contextual knowledge when evaluating a source.
 
 Not every modification was expected to change the numerical evaluation metrics. The Crossref retry logic addressed robustness rather than scoring under normal conditions, while the explanation changes addressed interpretability. Both were retained because performance metrics alone do not capture all requirements of a usable credibility-scoring application.
 
@@ -240,7 +249,9 @@ Taken together, the literature supports a credibility model based on converging 
 
 This project improved a baseline URL credibility-scoring algorithm by identifying specific failure modes and testing incremental modifications designed to address them. The final rule-based implementation incorporates preprint status, more careful interpretation of DOI evidence, external scholarly metadata from Crossref, recognition of the restricted `.int` domain, limited detection of sensational URL language, more robust handling of external metadata failures, and clearer user-facing explanations.
 
-Across the supplied 24-URL evaluation set, these changes reduced mean absolute error from 0.142 to 0.094, increased credibility-band accuracy from 66.7% to 83.3%, and reduced the worst individual error from 0.410 to 0.230. The final implementation also passed all 21 original automated tests plus three additional tests developed for the new behavior.
+Across the supplied 24-URL evaluation set, the rule-based improvements reduced mean absolute error from 0.142 to 0.094, increased credibility-band accuracy from 66.7% to 83.3%, and reduced the worst individual error from 0.410 to 0.230. The final rule-based implementation also passed all 21 original automated tests plus three additional tests developed for the new behavior.
+
+When the Claude LLM layer was enabled, performance improved further. The combined system achieved a mean absolute error of 0.058, credibility-band accuracy of 91.7%, and a worst individual error of 0.140. Thus, the strongest performance was obtained by combining the transparent, reproducible rule-based signals with the broader contextual assessment provided by the LLM.
 
 An important design goal was to improve generalization rather than simply memorize the evaluation set. For this reason, I did not add individual high-error domains to the known-domain table merely to improve their scores. The use of Crossref illustrates this approach: an unfamiliar scholarly domain can receive additional evidence from an independent metadata source without having to be manually added to the program.
 

@@ -48,6 +48,9 @@ import requests
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # The model used for the Layer 2 judgment. Claude Opus 5 is the most capable
 # model; switch to "claude-haiku-4-5" if you are scoring many URLs and want to
@@ -331,7 +334,7 @@ def rule_based_signals(url: str) -> List[Signal]:
     elif parsed.scheme == "http":
         signals.append(Signal("no_https", -0.05, "served over plain HTTP"))
 
-    # Signal 4: path keywords suggesting opinion, sponsorship, or user content.
+    # Signal 4: path keywords suggesting opinions, sponsorships, or user content.
     path = (parsed.path or "").lower()
     for fragment, delta in PATH_PENALTIES.items():
         if fragment in path:
@@ -475,7 +478,7 @@ def llm_opinion(url: str) -> Optional[Signal]:
         score = max(0.0, min(1.0, float(data["score"])))
         return Signal("llm", score, str(data["reason"]))
 
-    except Exception:
+    except Exception as e:
         # Any failure falls back to rules-only scoring rather than crashing.
         return None
 
