@@ -1,0 +1,11 @@
+
+# PersonaForge local files
+Project_2/.env
+Project_2/.venv/
+Project_2/.pytest_cache/
+Project_2/.ruff_cache/
+Project_2/.mypy_cache/
+Project_2/.DS_Store
+Project_2/**/__pycache__/
+Project_2/**/*.pyc
+Project_2/temp/
